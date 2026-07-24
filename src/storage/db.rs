@@ -443,6 +443,29 @@ impl DatabaseRepository {
             Ok(None)
         }
     }
+
+    pub fn save_refresh_error(&self, account_id: &str, provider: &str, error_message: &str) -> Result<i64, LimitLaneError> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO refresh_errors (account_id, provider, error_message, occurred_at)
+             VALUES (?1, ?2, ?3, ?4)",
+            params![account_id, provider, error_message, Utc::now().to_rfc3339()],
+        )?;
+        Ok(conn.last_insert_rowid())
+    }
+
+    pub fn get_refresh_errors(&self, account_id: &str) -> Result<Vec<String>, LimitLaneError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT error_message FROM refresh_errors WHERE account_id = ?1 ORDER BY id DESC",
+        )?;
+        let rows = stmt.query_map(params![account_id], |row| row.get(0))?;
+        let mut errors = Vec::new();
+        for r in rows {
+            errors.push(r?);
+        }
+        Ok(errors)
+    }
 }
 
 fn parse_account_row(row: &rusqlite::Row) -> Result<Account, rusqlite::Error> {
