@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "issues": [
+    {
+      "id": "6eea0981-6027-484d-9b0a-02242b9844be",
+      "projectId": "ce9bbdee-001a-4e00-86a4-340f367e0654",
+      "number": 1,
+      "title": "Implement the PRD for Build Limitlane",
+      "description": "Implement the attached PRD for Build Limitlane. Carefully understand the PRD and then implement it gradually but surely, one by one.",
+      "status": "todo",
+      "priority": "urgent",
+      "label": "feature",
+      "attachments": [
+        {
+          "name": "limitlane-prd-en.md",
+          "path": "/home/rangga/binerlabs/limitlane/.repotix/attachments/1784911613339-limitlane-prd-en.md",
+          "host": "vps"
+        }
+      ],
+      "harnessId": "antigravity",
+      "createdAt": "2026-07-24T16:48:07.959Z",
+      "updatedAt": "2026-07-24T16:49:09.617Z"
+    }
+  ]
+}
