@@ -178,11 +178,20 @@ pub async fn run_cli_command(
                 AccountAction::Add {
                     provider,
                     identity,
+                    p,
+                    i,
                     alias,
                     auth,
                     api_key,
                 } => {
-                    let sanitized_id = format!("{}_{}", provider, identity.replace('@', "_at_").replace('.', "_"));
+                    let prov = provider.or(p).ok_or_else(|| {
+                        LimitLaneError::Configuration("Missing provider argument. Example: limitlane accounts add codex yoshinoya@gmail.com".into())
+                    })?;
+                    let ident = identity.or(i).ok_or_else(|| {
+                        LimitLaneError::Configuration("Missing identity argument. Example: limitlane accounts add codex yoshinoya@gmail.com".into())
+                    })?;
+
+                    let sanitized_id = format!("{}_{}", prov, ident.replace('@', "_at_").replace('.', "_"));
                     let auth_method = match auth.to_lowercase().as_str() {
                         "oauth" => AuthMethod::OAuth,
                         "session_token" | "session" => AuthMethod::SessionToken,
@@ -190,27 +199,27 @@ pub async fn run_cli_command(
                     };
 
                     if let Some(ref key) = api_key {
-                        KeyringStore::store_secret(&provider, &sanitized_id, key)?;
+                        KeyringStore::store_secret(&prov, &sanitized_id, key)?;
                     }
 
                     let account = Account {
                         id: sanitized_id.clone(),
-                        provider: provider.clone(),
-                        identity: identity.clone(),
+                        provider: prov.clone(),
+                        identity: ident.clone(),
                         alias,
                         auth_method,
                         plan_raw: None,
                         plan_normalized: None,
                         active: Some(true),
                         health: AccountHealth::Ready,
-                        credential_reference: api_key.as_ref().map(|_| format!("keyring://{}/{}", provider, sanitized_id)),
+                        credential_reference: api_key.as_ref().map(|_| format!("keyring://{}/{}", prov, sanitized_id)),
                         created_at: Utc::now(),
                         updated_at: Utc::now(),
                         last_refresh_at: None,
                     };
 
                     db.save_account(&account)?;
-                    println!("Successfully added account '{}' for provider '{}'.", account.id, provider);
+                    println!("Successfully added account '{}' for provider '{}'.", account.id, prov);
                 }
                 AccountAction::Remove { id } => {
                     db.delete_account(&id)?;

@@ -55,14 +55,18 @@ pub enum AccountAction {
         #[arg(long)]
         json: bool,
     },
-    /// Add a new account
+    /// Add a new account (e.g. limitlane accounts add codex user@example.com)
     Add {
         /// Provider name (e.g. "claude" or "codex")
-        #[arg(long)]
-        provider: String,
+        provider: Option<String>,
         /// Identity / email address for account
+        identity: Option<String>,
+        /// Provider flag (--provider codex)
         #[arg(long)]
-        identity: String,
+        p: Option<String>,
+        /// Identity flag (--identity user@example.com)
+        #[arg(long)]
+        i: Option<String>,
         /// Optional alias for account
         #[arg(long)]
         alias: Option<String>,
