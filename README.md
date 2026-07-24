@@ -39,6 +39,20 @@ LimitLane is a native, local-first terminal dashboard for monitoring usage limit
 - **Rust** (1.75+ recommended)
 - OS native keyring support (`libsecret` on Linux)
 
+### Fast Command Installation (Local)
+
+Run in repository root:
+
+```bash
+cargo install --path .
+```
+
+Binary `limitlane` langsung ter-install ke PATH (`~/.cargo/bin/limitlane`). Bisa dipanggil langsung dari terminal mana saja:
+
+```bash
+limitlane
+```
+
 ### Building from Source
 
 ```bash
@@ -47,7 +61,7 @@ cd limitlane
 cargo build --release
 ```
 
-The compiled binary will be available at `./target/release/limitlane`.
+Binary hasil build ada di `./target/release/limitlane`.
 
 ---
 
