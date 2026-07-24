@@ -1,0 +1,13 @@
+{
+  "account_id": "personal@example.com",
+  "plan": "plus",
+  "shared_agentic_pool": {
+    "used_percent": 74.0,
+    "reset_at": "2026-07-25T04:00:00Z"
+  },
+  "credit_balance": 1250,
+  "extra_credits": {
+    "enabled": true,
+    "balance": 1250.0
+  }
+}

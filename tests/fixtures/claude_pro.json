@@ -1,0 +1,25 @@
+{
+  "account_id": "dev@example.com",
+  "plan": "max_5x",
+  "limits": [
+    {
+      "name": "5h_session",
+      "used_percent": 43.0,
+      "reset_at": "2026-07-24T22:00:00Z"
+    },
+    {
+      "name": "weekly_all_model",
+      "used_percent": 61.0,
+      "reset_at": "2026-07-30T00:00:00Z"
+    },
+    {
+      "name": "weekly_sonnet",
+      "used_percent": 82.0,
+      "reset_at": "2026-07-30T00:00:00Z"
+    }
+  ],
+  "extra_credits": {
+    "enabled": true,
+    "exhausted": false
+  }
+}
