@@ -39,7 +39,13 @@ LimitLane is a native, local-first terminal dashboard for monitoring usage limit
 - **Rust** (1.75+ recommended)
 - OS native keyring support (`libsecret` on Linux)
 
-### Fast Command Installation (Local)
+### One-Line Command Install (Recommended)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/binerlabs/limitlane/main/install.sh | bash
+```
+
+### Fast Local Command Install (Cargo)
 
 Run in repository root:
 
