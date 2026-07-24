@@ -5,22 +5,25 @@ use rusqlite::{params, Connection};
 use std::path::Path;
 use std::sync::Mutex;
 
+use std::sync::Arc;
+
+#[derive(Clone)]
 pub struct DatabaseRepository {
-    conn: Mutex<Connection>,
+    conn: Arc<Mutex<Connection>>,
 }
 
 impl DatabaseRepository {
     pub fn open(path: &Path) -> Result<Self, LimitLaneError> {
         let conn = Connection::open(path)?;
         Ok(Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
         })
     }
 
     pub fn open_in_memory() -> Result<Self, LimitLaneError> {
         let conn = Connection::open_in_memory()?;
         Ok(Self {
-            conn: Mutex::new(conn),
+            conn: Arc::new(Mutex::new(conn)),
         })
     }
 
