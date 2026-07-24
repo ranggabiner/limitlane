@@ -4,7 +4,7 @@ set -e
 # LimitLane Installation Script
 # Usage: curl -fsSL https://raw.githubusercontent.com/binerlabs/limitlane/main/install.sh | bash
 
-REPO="binerlabs/limitlane"
+REPO="ranggabiner/limitlane"
 INSTALL_DIR="${HOME}/.local/bin"
 
 echo "==== Installing LimitLane ===="

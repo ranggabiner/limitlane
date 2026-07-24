@@ -42,7 +42,7 @@ LimitLane is a native, local-first terminal dashboard for monitoring usage limit
 ### One-Line Command Install (Recommended)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/binerlabs/limitlane/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ranggabiner/limitlane/main/install.sh | bash
 ```
 
 ### Fast Local Command Install (Cargo)
