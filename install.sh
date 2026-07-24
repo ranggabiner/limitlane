@@ -12,16 +12,20 @@ echo "==== Installing LimitLane ===="
 # Ensure target directory exists
 mkdir -p "${INSTALL_DIR}"
 
-# Check if building from source via cargo is available
+# Check if building via cargo
 if command -v cargo >/dev/null 2>&1; then
-    echo "Found cargo! Installing LimitLane via cargo..."
+    echo "Found cargo! Installing LimitLane..."
     if [ -f "Cargo.toml" ]; then
         cargo install --path .
     else
-        echo "Building/Installing from crates.io..."
-        cargo install limitlane || {
-            echo "crates.io package not yet published. Clone repository and run 'cargo install --path .'"
-            exit 1
+        echo "Installing from GitHub repository..."
+        cargo install --git https://github.com/${REPO}.git --branch feat/sprint-1 || {
+            echo "Failed cargo install from git. Downloading source tarball..."
+            TMP_DIR="$(mktemp -d)"
+            trap 'rm -rf "${TMP_DIR}"' EXIT
+            curl -sSLf "https://github.com/${REPO}/archive/refs/heads/feat/sprint-1.tar.gz" -o "${TMP_DIR}/src.tar.gz"
+            tar -xzf "${TMP_DIR}/src.tar.gz" -C "${TMP_DIR}"
+            cd "${TMP_DIR}/limitlane-feat-sprint-1" && cargo install --path .
         }
     fi
 else
