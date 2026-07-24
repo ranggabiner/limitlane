@@ -7,7 +7,7 @@
       "number": 1,
       "title": "Implement the PRD for Build Limitlane",
       "description": "Implement the attached PRD for Build Limitlane. Carefully understand the PRD and then implement it gradually but surely, one by one.",
-      "status": "todo",
+      "status": "in_progress",
       "priority": "urgent",
       "label": "feature",
       "attachments": [
@@ -19,7 +19,7 @@
       ],
       "harnessId": "antigravity",
       "createdAt": "2026-07-24T16:48:07.959Z",
-      "updatedAt": "2026-07-24T16:49:09.617Z"
+      "updatedAt": "2026-07-24T16:56:31.997Z"
     }
   ]
 }
