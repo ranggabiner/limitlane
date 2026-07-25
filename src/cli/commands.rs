@@ -418,6 +418,7 @@ pub async fn run_cli_command(
     Ok(())
 }
 
+#[allow(dead_code)]
 fn open_browser(url: &str) {
     #[cfg(target_os = "macos")]
     let _ = std::process::Command::new("open").arg(url).spawn();
