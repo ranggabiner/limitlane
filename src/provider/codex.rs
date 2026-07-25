@@ -473,4 +473,8 @@ impl ProviderAdapter for CodexAdapter {
     async fn validate_auth(&self, _account: &Account) -> Result<AccountHealth, LimitLaneError> {
         Ok(AccountHealth::Ready)
     }
+
+    fn oauth_login_url(&self) -> Option<String> {
+        Some("https://auth.openai.com/authorize".to_string())
+    }
 }

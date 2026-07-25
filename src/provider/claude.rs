@@ -255,4 +255,8 @@ impl ProviderAdapter for ClaudeAdapter {
     async fn validate_auth(&self, _account: &Account) -> Result<AccountHealth, LimitLaneError> {
         Ok(AccountHealth::Ready)
     }
+
+    fn oauth_login_url(&self) -> Option<String> {
+        Some("https://claude.ai/login".to_string())
+    }
 }

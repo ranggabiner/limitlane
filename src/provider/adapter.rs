@@ -10,4 +10,5 @@ pub trait ProviderAdapter: Send + Sync {
     async fn fetch_account_metadata(&self, account: &Account) -> Result<AccountMetadata, LimitLaneError>;
     async fn fetch_usage(&self, account: &Account) -> Result<UsageSnapshot, LimitLaneError>;
     async fn validate_auth(&self, account: &Account) -> Result<AccountHealth, LimitLaneError>;
+    fn oauth_login_url(&self) -> Option<String>;
 }

@@ -220,6 +220,20 @@ pub async fn run_cli_command(
 
                     db.save_account(&account)?;
                     println!("Successfully added account '{}' for provider '{}'.", account.id, prov);
+
+                    if auth_method == AuthMethod::OAuth {
+                        let oauth_url = match prov.to_lowercase().as_str() {
+                            "claude" => "https://claude.ai/login",
+                            _ => "https://auth.openai.com/authorize",
+                        };
+                        println!("\n================================================================================");
+                        println!("                           OAuth Authorization Link                             ");
+                        println!("================================================================================");
+                        println!("Please open the following link in your browser to complete authorization:\n");
+                        println!("  {}", oauth_url);
+                        println!("\nLimitLane will automatically detect your active OAuth session from official client state.");
+                        println!("--------------------------------------------------------------------------------\n");
+                    }
                 }
                 AccountAction::Remove { id } => {
                     db.delete_account(&id)?;
@@ -230,7 +244,17 @@ pub async fn run_cli_command(
                         acc.health = AccountHealth::ReauthenticationRequired;
                         acc.updated_at = Utc::now();
                         db.save_account(&acc)?;
-                        println!("Account '{}' marked for reauthentication.", id);
+                        let oauth_url = match acc.provider.to_lowercase().as_str() {
+                            "claude" => "https://claude.ai/login",
+                            _ => "https://auth.openai.com/authorize",
+                        };
+                        println!("================================================================================");
+                        println!("                      OAuth Re-authorization Link                               ");
+                        println!("================================================================================");
+                        println!("Account '{}' ({}) marked for re-authentication.", acc.id, acc.provider);
+                        println!("\nPlease open this link in your browser to re-authorize:\n");
+                        println!("  {}", oauth_url);
+                        println!("\n--------------------------------------------------------------------------------");
                     } else {
                         return Err(LimitLaneError::Configuration(format!("Account '{}' not found", id)));
                     }
