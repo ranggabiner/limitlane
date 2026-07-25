@@ -207,7 +207,7 @@ pub async fn run_cli_command(
                         provider: prov.clone(),
                         identity: ident.clone(),
                         alias,
-                        auth_method,
+                        auth_method: auth_method.clone(),
                         plan_raw: None,
                         plan_normalized: None,
                         active: Some(true),
