@@ -222,28 +222,28 @@ pub async fn run_cli_command(
                     println!("Successfully added account '{}' for provider '{}'.", account.id, prov);
 
                     if auth_method == AuthMethod::OAuth {
+                        let redirect_uri = "http://localhost:1455/callback";
                         let oauth_url = match prov.to_lowercase().as_str() {
-                            "claude" => "https://claude.ai/login",
-                            _ => "https://auth.openai.com/authorize",
+                            "claude" => format!("https://claude.ai/login?redirect_uri={}", redirect_uri),
+                            _ => format!("https://auth.openai.com/authorize?response_type=code&redirect_uri={}", redirect_uri),
                         };
                         println!("\n================================================================================");
-                        println!("                           OAuth Interactive Login                              ");
+                        println!("                        Automatic OAuth Browser Flow                            ");
                         println!("================================================================================");
-                        println!("1. Open this authorization URL in your browser:\n");
-                        println!("     {}", oauth_url);
-                        println!("\n2. After logging in, copy your authorization token / session key.");
-                        print!("\n3. Paste your OAuth token / key here: ");
-                        use std::io::Write;
-                        std::io::stdout().flush().ok();
+                        println!("Opening your default browser to complete authorization:\n");
+                        println!("  {}", oauth_url);
 
-                        let mut input_token = String::new();
-                        if std::io::stdin().read_line(&mut input_token).is_ok() {
-                            let token = input_token.trim();
-                            if !token.is_empty() {
-                                KeyringStore::store_secret(&prov, &sanitized_id, token)?;
-                                println!("\n[OK] OAuth token saved securely to OS keyring for '{}'!", sanitized_id);
-                            } else {
-                                println!("\n[!] No token entered. You can set it later via `limitlane accounts reauth --id {}`", sanitized_id);
+                        open_browser(&oauth_url);
+
+                        let server = crate::service::oauth::LocalOAuthServer::new(1455);
+                        match server.listen_for_code().await {
+                            Ok(code) => {
+                                KeyringStore::store_secret(&prov, &sanitized_id, &code)?;
+                                println!("\n[OK] OAuth callback captured! Token saved securely to OS keyring for '{}'.", sanitized_id);
+                            }
+                            Err(e) => {
+                                println!("\n[!] Automatic OAuth callback listener failed: {}", e);
+                                println!("    You can set key manually via: limitlane accounts reauth --id {}", sanitized_id);
                             }
                         }
                         println!("--------------------------------------------------------------------------------\n");
@@ -255,36 +255,35 @@ pub async fn run_cli_command(
                 }
                 AccountAction::Reauth { id } => {
                     if let Some(mut acc) = db.get_account(&id)? {
+                        let redirect_uri = "http://localhost:1455/callback";
                         let oauth_url = match acc.provider.to_lowercase().as_str() {
-                            "claude" => "https://claude.ai/login",
-                            _ => "https://auth.openai.com/authorize",
+                            "claude" => format!("https://claude.ai/login?redirect_uri={}", redirect_uri),
+                            _ => format!("https://auth.openai.com/authorize?response_type=code&redirect_uri={}", redirect_uri),
                         };
                         println!("================================================================================");
-                        println!("                     OAuth Re-authentication Interactive Flow                   ");
+                        println!("                   OAuth Re-authentication Automatic Flow                       ");
                         println!("================================================================================");
                         println!("Account ID: {}", acc.id);
                         println!("Provider:   {}", acc.provider);
-                        println!("\n1. Open this link in your browser to re-authorize:\n");
-                        println!("     {}", oauth_url);
-                        println!("\n2. Copy the fresh OAuth access token / API key.");
-                        print!("\n3. Paste new OAuth token / key here: ");
-                        use std::io::Write;
-                        std::io::stdout().flush().ok();
+                        println!("\nOpening browser for re-authorization:\n");
+                        println!("  {}", oauth_url);
 
-                        let mut input_token = String::new();
-                        if std::io::stdin().read_line(&mut input_token).is_ok() {
-                            let token = input_token.trim();
-                            if !token.is_empty() {
-                                KeyringStore::store_secret(&acc.provider, &acc.id, token)?;
+                        open_browser(&oauth_url);
+
+                        let server = crate::service::oauth::LocalOAuthServer::new(1455);
+                        match server.listen_for_code().await {
+                            Ok(code) => {
+                                KeyringStore::store_secret(&acc.provider, &acc.id, &code)?;
                                 acc.health = AccountHealth::Ready;
                                 acc.updated_at = Utc::now();
                                 db.save_account(&acc)?;
-                                println!("\n[OK] Re-authentication successful! Token saved securely in keyring.");
-                            } else {
+                                println!("\n[OK] Re-authentication successful! Secret token updated in keyring.");
+                            }
+                            Err(e) => {
                                 acc.health = AccountHealth::ReauthenticationRequired;
                                 acc.updated_at = Utc::now();
                                 db.save_account(&acc)?;
-                                println!("\n[!] No token entered. Account remains marked for re-authentication.");
+                                println!("\n[!] OAuth callback failed: {}. Account marked for re-authentication.", e);
                             }
                         }
                         println!("--------------------------------------------------------------------------------\n");
@@ -416,4 +415,13 @@ pub async fn run_cli_command(
     }
 
     Ok(())
+}
+
+fn open_browser(url: &str) {
+    #[cfg(target_os = "macos")]
+    let _ = std::process::Command::new("open").arg(url).spawn();
+    #[cfg(target_os = "linux")]
+    let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    #[cfg(target_os = "windows")]
+    let _ = std::process::Command::new("cmd").args(&["/C", "start", url]).spawn();
 }
