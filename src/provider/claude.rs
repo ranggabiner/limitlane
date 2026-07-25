@@ -234,6 +234,47 @@ impl ProviderAdapter for ClaudeAdapter {
     }
 
     async fn fetch_usage(&self, account: &Account) -> Result<UsageSnapshot, LimitLaneError> {
+        let token = crate::storage::KeyringStore::get_secret("claude", &account.id)?
+            .or_else(|| std::env::var("ANTHROPIC_API_KEY").ok());
+
+        if let Some(tok) = token {
+            let client = reqwest::Client::new();
+            let mut req = client.get(format!("{}/v1/users/me/usage", self.base_url))
+                .header("anthropic-version", "2023-06-01");
+            
+            if tok.starts_with("sk-") {
+                req = req.header("x-api-key", &tok);
+            } else {
+                req = req.header("Authorization", format!("Bearer {}", tok));
+            }
+
+            match req.send().await {
+                Ok(resp) if resp.status().is_success() => {
+                    let text = resp.text().await.map_err(|e| LimitLaneError::Network {
+                        url: format!("{}/v1/users/me/usage", self.base_url),
+                        message: e.to_string(),
+                    })?;
+                    return self.parse_usage_json(&account.id, &text);
+                }
+                Ok(resp) => {
+                    let status = resp.status();
+                    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+                        return Err(LimitLaneError::Authentication {
+                            provider: "claude".into(),
+                            account_id: account.id.clone(),
+                            message: format!("Authentication failed (HTTP {})", status),
+                        });
+                    }
+                }
+                Err(e) => {
+                    return Err(LimitLaneError::Network {
+                        url: format!("{}/v1/users/me/usage", self.base_url),
+                        message: e.to_string(),
+                    });
+                }
+            }
+        }
+
         let snapshot = UsageSnapshot {
             account_id: account.id.clone(),
             provider: self.provider_id(),
