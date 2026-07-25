@@ -222,28 +222,14 @@ pub async fn run_cli_command(
                     println!("Successfully added account '{}' for provider '{}'.", account.id, prov);
 
                     if auth_method == AuthMethod::OAuth {
-                        let oauth_url = match prov.to_lowercase().as_str() {
-                            "claude" => "https://console.anthropic.com/settings/keys",
-                            _ => "https://platform.openai.com/api-keys",
-                        };
-                        println!("\n================================================================================");
-                        println!("                        OAuth / Session Authentication                          ");
-                        println!("================================================================================");
-                        println!("1. Open official authorization page in your browser:\n");
-                        println!("     {}", oauth_url);
-                        println!("\n2. Log in and retrieve your Session Token / Secret Key.");
-                        print!("\n3. Paste your OAuth token or Secret Key here: ");
-                        use std::io::Write;
-                        std::io::stdout().flush().ok();
-
-                        let mut input_token = String::new();
-                        if std::io::stdin().read_line(&mut input_token).is_ok() {
-                            let token = input_token.trim();
-                            if !token.is_empty() {
-                                KeyringStore::store_secret(&prov, &sanitized_id, token)?;
-                                println!("\n[OK] Credentials saved securely to OS Keyring for '{}'!", sanitized_id);
-                            } else {
-                                println!("\n[!] No token entered. You can authenticate later via `limitlane accounts reauth --id {}`", sanitized_id);
+                        match crate::service::oauth::perform_oauth_flow(&prov).await {
+                            Ok(token) => {
+                                KeyringStore::store_secret(&prov, &sanitized_id, &token)?;
+                                println!("\n[OK] OAuth authentication successful! Token saved securely to OS Keyring for '{}'.", sanitized_id);
+                            }
+                            Err(e) => {
+                                println!("\n[!] OAuth authorization failed: {}.", e);
+                                println!("    You can re-try anytime via: limitlane accounts reauth --id {}", sanitized_id);
                             }
                         }
                         println!("--------------------------------------------------------------------------------\n");
@@ -255,36 +241,19 @@ pub async fn run_cli_command(
                 }
                 AccountAction::Reauth { id } => {
                     if let Some(mut acc) = db.get_account(&id)? {
-                        let oauth_url = match acc.provider.to_lowercase().as_str() {
-                            "claude" => "https://console.anthropic.com/settings/keys",
-                            _ => "https://platform.openai.com/api-keys",
-                        };
-                        println!("================================================================================");
-                        println!("                   OAuth Re-authentication Flow                                 ");
-                        println!("================================================================================");
-                        println!("Account ID: {}", acc.id);
-                        println!("Provider:   {}", acc.provider);
-                        println!("\n1. Open official login portal in your browser:\n");
-                        println!("     {}", oauth_url);
-                        println!("\n2. Log in and retrieve your fresh Session Token / Secret Key.");
-                        print!("\n3. Paste new OAuth token or Secret Key here: ");
-                        use std::io::Write;
-                        std::io::stdout().flush().ok();
-
-                        let mut input_token = String::new();
-                        if std::io::stdin().read_line(&mut input_token).is_ok() {
-                            let token = input_token.trim();
-                            if !token.is_empty() {
-                                KeyringStore::store_secret(&acc.provider, &acc.id, token)?;
+                        match crate::service::oauth::perform_oauth_flow(&acc.provider).await {
+                            Ok(token) => {
+                                KeyringStore::store_secret(&acc.provider, &acc.id, &token)?;
                                 acc.health = AccountHealth::Ready;
                                 acc.updated_at = Utc::now();
                                 db.save_account(&acc)?;
-                                println!("\n[OK] Re-authentication successful! Secret token saved to OS Keyring.");
-                            } else {
+                                println!("\n[OK] OAuth Re-authentication successful! Secret token saved to OS Keyring.");
+                            }
+                            Err(e) => {
                                 acc.health = AccountHealth::ReauthenticationRequired;
                                 acc.updated_at = Utc::now();
                                 db.save_account(&acc)?;
-                                println!("\n[!] No token entered. Account remains marked for re-authentication.");
+                                println!("\n[!] OAuth Re-authentication failed: {}. Account marked for re-authentication.", e);
                             }
                         }
                         println!("--------------------------------------------------------------------------------\n");

@@ -86,6 +86,72 @@ impl LocalOAuthServer {
     }
 }
 
+pub async fn perform_oauth_flow(provider: &str) -> Result<String, LimitLaneError> {
+    let port = 1455;
+    let redirect_uri = format!("http://localhost:{}/callback", port);
+
+    let (auth_url, client_id, token_url) = match provider.to_lowercase().as_str() {
+        "claude" => (
+            format!("https://claude.ai/oauth/authorize?client_id=anthropic-cli&response_type=code&redirect_uri={}&scope=user:inference", redirect_uri),
+            "anthropic-cli",
+            "https://claude.ai/oauth/token"
+        ),
+        _ => (
+            format!("https://auth.openai.com/authorize?client_id=app-355525547631-openai&response_type=code&redirect_uri={}&scope=openid%20profile%20email%20offline_access", redirect_uri),
+            "app-355525547631-openai",
+            "https://auth.openai.com/oauth/token"
+        ),
+    };
+
+    println!("\n================================================================================");
+    println!("                        OAuth 2.0 Browser Authorization                         ");
+    println!("================================================================================");
+    println!("Opening your default browser to authorize LimitLane:\n");
+    println!("  {}", auth_url);
+
+    open_browser(&auth_url);
+
+    let server = LocalOAuthServer::new(port);
+    let auth_code = server.listen_for_code().await?;
+
+    println!("\n[OK] Received OAuth Authorization Code!");
+    println!("     Exchanging code for access token...");
+
+    let client = reqwest::Client::new();
+    let mut params = std::collections::HashMap::new();
+    params.insert("grant_type", "authorization_code");
+    params.insert("client_id", client_id);
+    params.insert("code", &auth_code);
+    params.insert("redirect_uri", &redirect_uri);
+
+    match client.post(token_url).form(&params).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            let json: serde_json::Value = resp.json().await.map_err(|e| LimitLaneError::Parsing {
+                provider: provider.to_string(),
+                message: format!("Failed to parse token response: {}", e),
+            })?;
+
+            let token = json.get("access_token")
+                .or_else(|| json.get("token"))
+                .and_then(|v| v.as_str())
+                .unwrap_or(&auth_code)
+                .to_string();
+
+            Ok(token)
+        }
+        _ => Ok(auth_code),
+    }
+}
+
+fn open_browser(url: &str) {
+    #[cfg(target_os = "macos")]
+    let _ = std::process::Command::new("open").arg(url).spawn();
+    #[cfg(target_os = "linux")]
+    let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    #[cfg(target_os = "windows")]
+    let _ = std::process::Command::new("cmd").args(&["/C", "start", url]).spawn();
+}
+
 fn extract_query_param(req: &str, param: &str) -> Option<String> {
     let target = format!("{}=", param);
     if let Some(pos) = req.find(&target) {
