@@ -227,11 +227,25 @@ pub async fn run_cli_command(
                             _ => "https://auth.openai.com/authorize",
                         };
                         println!("\n================================================================================");
-                        println!("                           OAuth Authorization Link                             ");
+                        println!("                           OAuth Interactive Login                              ");
                         println!("================================================================================");
-                        println!("Please open the following link in your browser to complete authorization:\n");
-                        println!("  {}", oauth_url);
-                        println!("\nLimitLane will automatically detect your active OAuth session from official client state.");
+                        println!("1. Open this authorization URL in your browser:\n");
+                        println!("     {}", oauth_url);
+                        println!("\n2. After logging in, copy your authorization token / session key.");
+                        print!("\n3. Paste your OAuth token / key here: ");
+                        use std::io::Write;
+                        std::io::stdout().flush().ok();
+
+                        let mut input_token = String::new();
+                        if std::io::stdin().read_line(&mut input_token).is_ok() {
+                            let token = input_token.trim();
+                            if !token.is_empty() {
+                                KeyringStore::store_secret(&prov, &sanitized_id, token)?;
+                                println!("\n[OK] OAuth token saved securely to OS keyring for '{}'!", sanitized_id);
+                            } else {
+                                println!("\n[!] No token entered. You can set it later via `limitlane accounts reauth --id {}`", sanitized_id);
+                            }
+                        }
                         println!("--------------------------------------------------------------------------------\n");
                     }
                 }
@@ -241,20 +255,39 @@ pub async fn run_cli_command(
                 }
                 AccountAction::Reauth { id } => {
                     if let Some(mut acc) = db.get_account(&id)? {
-                        acc.health = AccountHealth::ReauthenticationRequired;
-                        acc.updated_at = Utc::now();
-                        db.save_account(&acc)?;
                         let oauth_url = match acc.provider.to_lowercase().as_str() {
                             "claude" => "https://claude.ai/login",
                             _ => "https://auth.openai.com/authorize",
                         };
                         println!("================================================================================");
-                        println!("                      OAuth Re-authorization Link                               ");
+                        println!("                     OAuth Re-authentication Interactive Flow                   ");
                         println!("================================================================================");
-                        println!("Account '{}' ({}) marked for re-authentication.", acc.id, acc.provider);
-                        println!("\nPlease open this link in your browser to re-authorize:\n");
-                        println!("  {}", oauth_url);
-                        println!("\n--------------------------------------------------------------------------------");
+                        println!("Account ID: {}", acc.id);
+                        println!("Provider:   {}", acc.provider);
+                        println!("\n1. Open this link in your browser to re-authorize:\n");
+                        println!("     {}", oauth_url);
+                        println!("\n2. Copy the fresh OAuth access token / API key.");
+                        print!("\n3. Paste new OAuth token / key here: ");
+                        use std::io::Write;
+                        std::io::stdout().flush().ok();
+
+                        let mut input_token = String::new();
+                        if std::io::stdin().read_line(&mut input_token).is_ok() {
+                            let token = input_token.trim();
+                            if !token.is_empty() {
+                                KeyringStore::store_secret(&acc.provider, &acc.id, token)?;
+                                acc.health = AccountHealth::Ready;
+                                acc.updated_at = Utc::now();
+                                db.save_account(&acc)?;
+                                println!("\n[OK] Re-authentication successful! Token saved securely in keyring.");
+                            } else {
+                                acc.health = AccountHealth::ReauthenticationRequired;
+                                acc.updated_at = Utc::now();
+                                db.save_account(&acc)?;
+                                println!("\n[!] No token entered. Account remains marked for re-authentication.");
+                            }
+                        }
+                        println!("--------------------------------------------------------------------------------\n");
                     } else {
                         return Err(LimitLaneError::Configuration(format!("Account '{}' not found", id)));
                     }
